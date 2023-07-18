@@ -74,6 +74,7 @@ func (m *Mutex) runWatchDog(ctx context.Context) {
 		for range ticker.C {
 			select {
 			case <-ctx.Done():
+				atomic.StoreUint32(&m.watchDog.isStart, 0)
 				return
 			default:
 			}
