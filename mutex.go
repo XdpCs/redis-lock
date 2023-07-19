@@ -23,9 +23,7 @@ func (m *Mutex) Unlock(ctx context.Context) error {
 	defer func() {
 		// stop watch dog
 		if m.watchDog != nil {
-			if m.watchDog.cancelFunc != nil {
-				m.watchDog.cancelFunc()
-			}
+			m.stopWatchDog()
 		}
 	}()
 
@@ -33,7 +31,7 @@ func (m *Mutex) Unlock(ctx context.Context) error {
 		return ErrMutexNotHeld
 	}
 
-	status, err := luaUnlock.Run(ctx, m.client.redisClient, []string{m.key}, m.value).Result()
+	status, err := luaUnlock.Run(ctx, m.client.redisClient, []string{m.key}, m.value).Int()
 	if err == redis.Nil {
 		return ErrMutexNotHeld
 	} else if err != nil {
@@ -46,12 +44,17 @@ func (m *Mutex) Unlock(ctx context.Context) error {
 	return nil
 }
 
+// Refresh resets the lock's expiration.
 func (m *Mutex) Refresh(ctx context.Context) error {
+	return m.refresh(ctx)
+}
+
+func (m *Mutex) refresh(ctx context.Context) error {
 	if m == nil {
 		return ErrMutexNotHeld
 	}
 
-	status, err := luaRefresh.Run(ctx, m.client.redisClient, []string{m.key}, m.value, m.expiration.Milliseconds()).Result()
+	status, err := luaRefresh.Run(ctx, m.client.redisClient, []string{m.key}, m.value, m.expiration.Milliseconds()).Int()
 	if err != nil {
 		return err
 	}
@@ -68,7 +71,7 @@ func (m *Mutex) runWatchDog(ctx context.Context) {
 
 	ctx, m.watchDog.cancelFunc = context.WithCancel(ctx)
 	go func() {
-		ticker := time.NewTicker(m.watchDog.expiration / 2)
+		ticker := time.NewTicker(m.watchDog.expiration / 3)
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -79,7 +82,7 @@ func (m *Mutex) runWatchDog(ctx context.Context) {
 			default:
 			}
 
-			if err := m.Refresh(ctx); err != nil {
+			if err := m.refresh(ctx); err != nil {
 				m.watchDog.cancelFunc()
 				return
 			}
@@ -94,11 +97,12 @@ func (m *Mutex) stopWatchDog() {
 }
 
 // newMutex creates a new Mutex.
-func newMutex(client *Client, key, value string, strategy RetryStrategy) *Mutex {
+func newMutex(client *Client, key, value string, expiration time.Duration, strategy RetryStrategy) *Mutex {
 	return &Mutex{
 		client:        client,
 		key:           key,
 		value:         value,
+		expiration:    expiration,
 		retryStrategy: strategy,
 	}
 }

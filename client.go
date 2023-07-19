@@ -47,7 +47,7 @@ func (c *Client) TryLock(ctx context.Context, key string, expiration time.Durati
 	}
 	option.retryStrategy = NewNoRetry()
 
-	return c.tryLock(ctx, key, expiration, option)
+	return c.tryLock(ctx, key, option.watchDog.expiration, option)
 }
 
 // TryLockWithRetry tries to acquire a lock with retry strategy.
@@ -101,11 +101,10 @@ func (c *Client) tryLock(ctx context.Context, key string, expiration time.Durati
 		return nil, fmt.Errorf("c.getValue error: %w", err)
 	}
 
-	mutex := newMutex(c, key, value, option.retryStrategy)
+	mutex := newMutex(c, key, value, expiration, option.retryStrategy)
 
 	if option.watchDog != nil {
 		mutex.setWatchDog(option.watchDog)
-		expiration = option.watchDog.expiration
 	}
 
 	if _, ok := ctx.Deadline(); !ok {
@@ -123,7 +122,7 @@ func (c *Client) tryLock(ctx context.Context, key string, expiration time.Durati
 
 		if ok {
 			if option.watchDog != nil {
-				mutex.runWatchDog(ctx)
+				mutex.runWatchDog(context.Background())
 			}
 			return mutex, nil
 		}
@@ -155,6 +154,7 @@ func (c *Client) lock(ctx context.Context, key, value string, expiration time.Du
 // getValue returns a value that is unique to this client.
 func (c *Client) getValue() (string, error) {
 	cipher := c.Cipher
+	var err error
 	if cipher == nil {
 		key := c.cipherKey
 		if c.cipherKey == "-1" {
@@ -162,7 +162,7 @@ func (c *Client) getValue() (string, error) {
 			c.cipherKey = key
 		}
 
-		cipher, err := rc4.NewCipher([]byte(key))
+		cipher, err = rc4.NewCipher([]byte(key))
 		if err != nil {
 			return "", fmt.Errorf("rc4.NewCipher error: %w", err)
 		}
