@@ -8,7 +8,7 @@ var (
 	ErrWatchDogIsNil                  = errors.New("watch dog is nil")
 	ErrMutexLockFailed                = errors.New("mutex locks failed")
 	ErrMutexNotHeld                   = errors.New("mutex not held")
-	ErrMutexNotInit                   = errors.New("mutex not init")
+	ErrMutexNotInitialized            = errors.New("mutex not initialized")
 )
 
 // IsWatchDogExpiredNotLessThanZero returns true if err is ErrWatchDogExpiredNotLessThanZero.

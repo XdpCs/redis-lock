@@ -5,7 +5,7 @@ go 1.17
 replace github.com/XdpCs/redis-lock => ../
 
 require (
-	github.com/XdpCs/redis-lock v0.0.0-00010101000000-000000000000
+	github.com/XdpCs/redis-lock v0.0.0-20230719094903-e79ff7e15277
 	github.com/redis/go-redis/v9 v9.0.5
 )
 
