@@ -28,7 +28,7 @@ func (m *Mutex) Unlock(ctx context.Context) error {
 	}()
 
 	if m == nil {
-		return ErrMutexNotHeld
+		return ErrMutexNotInitialized
 	}
 
 	status, err := luaUnlock.Run(ctx, m.client.redisClient, []string{m.key}, m.value).Int()

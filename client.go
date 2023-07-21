@@ -101,28 +101,31 @@ func (c *Client) tryLock(ctx context.Context, key string, expiration time.Durati
 		return nil, fmt.Errorf("c.getValue error: %w", err)
 	}
 
+	parentCtx := ctx
+	childCtx := ctx
+
 	mutex := newMutex(c, key, value, expiration, option.retryStrategy)
 
 	if option.watchDog != nil {
 		mutex.setWatchDog(option.watchDog)
 	}
 
-	if _, ok := ctx.Deadline(); !ok {
+	if _, ok := childCtx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, time.Now().Add(expiration))
+		childCtx, cancel = context.WithDeadline(childCtx, time.Now().Add(expiration))
 		defer cancel()
 	}
 
 	var ticker *time.Ticker
 	for {
-		ok, err := c.lock(ctx, key, value, expiration)
+		ok, err := c.lock(childCtx, key, value, expiration)
 		if err != nil {
 			return nil, fmt.Errorf("c.lock error: %w", err)
 		}
 
 		if ok {
 			if option.watchDog != nil {
-				mutex.runWatchDog(context.Background())
+				mutex.runWatchDog(parentCtx)
 			}
 			return mutex, nil
 		}
@@ -140,7 +143,7 @@ func (c *Client) tryLock(ctx context.Context, key string, expiration time.Durati
 		}
 
 		select {
-		case <-ctx.Done():
+		case <-childCtx.Done():
 			return nil, ctx.Err()
 		case <-ticker.C:
 		}
@@ -169,8 +172,9 @@ func (c *Client) getValue() (string, error) {
 		c.Cipher = cipher
 	}
 
-	value := make([]byte, len(time.Now().String()))
-	cipher.XORKeyStream(value, []byte(time.Now().String()))
+	nowString := time.Now().String()
+	value := make([]byte, len(nowString))
+	cipher.XORKeyStream(value, []byte(nowString))
 
 	return string(value), nil
 }
