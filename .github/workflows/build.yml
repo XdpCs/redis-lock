@@ -9,6 +9,7 @@ on:
     branches: [ "*" ]
 
 jobs:
+
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -17,6 +18,17 @@ jobs:
         golang:
           - 1.18
     steps:
+      - name: Setup redis
+        uses: supercharge/redis-github-action@1.2.0
+        with:
+          redis-version: 6
+
+      - name: Install redis cli # so we can test the server
+        run: sudo apt-get install -y redis-tools
+
+      - name: Verify that redis is up
+        run: redis-cli ping
+
       - name: "set up go"
         uses: actions/setup-go@v3
         with:
