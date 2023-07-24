@@ -54,7 +54,10 @@ func main() {
 	// flush redis
 	_ = rdb.FlushDB(ctx).Err()
 	// init redislock client
-	client := redislock.NewDefaultClient(rdb)
+	client, err := redislock.NewDefaultClient(rdb)
+	if err != nil {
+		panic(err)
+	}
 	// try lock with default parameter
 	mutex, err := client.TryLock(ctx, "XdpCs", -1)
 	if err != nil {

@@ -3,8 +3,10 @@ package redislock
 import (
 	"context"
 	"crypto/rc4"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"testing"
+	"time"
 )
 
 func TestNewClient(t *testing.T) {
@@ -95,12 +97,21 @@ func TestClient_TryLock(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewDefaultClient error")
 	}
+	keyOne := "testOne"
+	keyTwo := "testTwo"
+	defer teardown(t, rdb, []string{keyOne, keyTwo})
 
-	ctx := context.Background()
+	ctxOne := context.Background()
+	ctxTwo := context.Background()
 
-	actualOne, err := client.TryLock(ctx, "testOne", -1)
+	actualOne, err := client.TryLock(ctxOne, keyOne, -1)
 	if err != nil {
 		t.Fatal("actualOne TryLock error")
+	}
+
+	actualTwo, err := client.TryLock(ctxTwo, keyTwo, 10*time.Second)
+	if err != nil {
+		t.Fatal("actualTwo TryLock error")
 	}
 
 	// test cases
@@ -112,12 +123,26 @@ func TestClient_TryLock(t *testing.T) {
 		{
 			"TryLockWithWatchDog",
 			actualOne,
-			&Mutex{client: client, key: "test", expiration: 30, value: "test"},
+			&Mutex{
+				client:        client,
+				key:           keyOne,
+				expiration:    30 * time.Second,
+				value:         actualOne.value,
+				retryStrategy: NewNoRetry(),
+				watchDog:      actualOne.watchDog,
+			},
 		},
 		{
 			"TryLockWithExpiration",
-			client.TryLock(ctx, "test", 1),
-			&Mutex{client: client, key: "test", expiration: 1, value: "test"},
+			actualTwo,
+			&Mutex{
+				client:        client,
+				key:           keyTwo,
+				expiration:    10 * time.Second,
+				value:         actualTwo.value,
+				retryStrategy: NewNoRetry(),
+				watchDog:      nil,
+			},
 		},
 	}
 
@@ -145,6 +170,10 @@ func compareMutex(t *testing.T, expected *Mutex, actual *Mutex) {
 	if expected.value != actual.value {
 		t.Errorf("value is not equal,expected %v, got %v", expected.value, actual.value)
 	}
+
+	if fmt.Sprintf("%T", expected.retryStrategy) != fmt.Sprintf("%T", actual.retryStrategy) {
+		t.Errorf("retryStrategy is not equal,expected %v, got %v", expected.retryStrategy, actual.retryStrategy)
+	}
 }
 
 func compareClient(t *testing.T, expect, actual *Client) {
@@ -160,5 +189,18 @@ func compareClient(t *testing.T, expect, actual *Client) {
 	if expect.Cipher != actual.Cipher {
 		t.Errorf("cipher is not equal,expected %v, got %v", expect.Cipher, actual.Cipher)
 	}
+}
 
+func teardown(t *testing.T, rc *redis.Client, lockKeys []string) {
+	t.Helper()
+
+	for _, key := range lockKeys {
+		if err := rc.Del(context.Background(), key).Err(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := rc.Close(); err != nil {
+		t.Fatal(err)
+	}
 }

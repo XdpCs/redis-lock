@@ -18,6 +18,11 @@ type Mutex struct {
 	watchDog      *WatchDog
 }
 
+type mutexOption struct {
+	retryStrategy RetryStrategy
+	watchDog      *WatchDog
+}
+
 // Unlock releases the lock.
 func (m *Mutex) Unlock(ctx context.Context) error {
 	defer func() {

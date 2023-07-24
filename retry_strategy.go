@@ -11,13 +11,13 @@ type RetryStrategy interface {
 type NoRetry struct{}
 
 // NextRetryTime returns 0, which means no retry.
-func (n NoRetry) NextRetryTime() time.Duration {
+func (n *NoRetry) NextRetryTime() time.Duration {
 	return 0
 }
 
 // NewNoRetry creates a new NoRetry.
-func NewNoRetry() NoRetry {
-	return NoRetry{}
+func NewNoRetry() *NoRetry {
+	return &NoRetry{}
 }
 
 // AverageRetry is a retry strategy that retries for a fixed number of times with a fixed interval.
@@ -37,8 +37,8 @@ func (a *AverageRetry) NextRetryTime() time.Duration {
 }
 
 // NewAverageRetry creates a new AverageRetry.
-func NewAverageRetry(maxRetryCount uint, retryInterval time.Duration) AverageRetry {
-	return AverageRetry{
+func NewAverageRetry(maxRetryCount uint, retryInterval time.Duration) *AverageRetry {
+	return &AverageRetry{
 		maxRetryCount: maxRetryCount,
 		retryInterval: retryInterval,
 	}
