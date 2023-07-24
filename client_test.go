@@ -4,9 +4,10 @@ import (
 	"context"
 	"crypto/rc4"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"testing"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func TestNewClient(t *testing.T) {
