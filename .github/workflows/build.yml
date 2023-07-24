@@ -9,25 +9,7 @@ on:
     branches: [ "*" ]
 
 jobs:
-  # Label of the container job
-  container-job:
-    # Containers must run in Linux based operating systems
-    runs-on: ubuntu-latest
-    # Docker Hub image that `container-job` executes in
-    container: node:10.18-jessie
 
-    # Service containers to run with `container-job`
-    services:
-      # Label used to access the service container
-      redis:
-        # Docker Hub image
-        image: redis
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -36,6 +18,17 @@ jobs:
         golang:
           - 1.18
     steps:
+      - name: Setup redis
+        uses: supercharge/redis-github-action@1.2.0
+        with:
+        redis-version: 6
+
+      - name: Install redis cli # so we can test the server
+        run: sudo apt-get install -y redis-tools
+
+      - name: Verify that redis is up
+        run: redis-cli ping
+
       - name: "set up go"
         uses: actions/setup-go@v3
         with:
