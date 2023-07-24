@@ -1,6 +1,6 @@
 module github.com/XdpCs/redis-lock
 
-go 1.17
+go 1.18
 
 require github.com/redis/go-redis/v9 v9.0.5
 
