@@ -83,8 +83,8 @@ func (c *Client) TryLock(ctx context.Context, key string, expiration time.Durati
 	return c.tryLock(ctx, key, expiration, option)
 }
 
-// TryLockWithRetry tries to acquire a lock with retry strategy.
-func (c *Client) TryLockWithRetry(ctx context.Context, key string, expiration time.Duration, retryStrategy RetryStrategy) (*Mutex, error) {
+// TryLockWithRetryStrategy tries to acquire a lock with retry strategy.
+func (c *Client) TryLockWithRetryStrategy(ctx context.Context, key string, expiration time.Duration, retryStrategy RetryStrategy) (*Mutex, error) {
 	option := &mutexOption{}
 
 	// expiration == -1 means no expiration, so start watch dog.
@@ -178,7 +178,7 @@ func (c *Client) tryLock(ctx context.Context, key string, expiration time.Durati
 
 		select {
 		case <-childCtx.Done():
-			return nil, ctx.Err()
+			return nil, childCtx.Err()
 		case <-ticker.C:
 		}
 	}
