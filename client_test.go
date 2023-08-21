@@ -3,6 +3,7 @@ package redislock
 import (
 	"context"
 	"crypto/rc4"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -248,7 +249,8 @@ func TestClient_TryLockWithWatchDog(t *testing.T) {
 	keyOne := "testOne"
 	keyTwo := "testTwo"
 	keyThree := "testThree"
-	defer teardown(t, rdb, []string{keyOne, keyTwo, keyThree})
+	keyFour := "testFour"
+	defer teardown(t, rdb, []string{keyOne, keyTwo, keyThree, keyFour})
 
 	actualOne, err := client.TryLockWithWatchDog(context.Background(), keyOne, nil)
 	if err != nil {
@@ -263,6 +265,15 @@ func TestClient_TryLockWithWatchDog(t *testing.T) {
 	actualThree, err := client.TryLockWithWatchDog(context.Background(), keyThree, NewWatchDog(10*time.Second))
 	if err != nil {
 		t.Fatalf("actualThree TryLockWithWatchDog error:[%v]", err)
+	}
+
+	_, err = client.TryLockWithWatchDog(context.Background(), keyThree, NewWatchDog(-1*time.Second))
+	if err != nil {
+		t.Run("TryLockWithFailedWatchDog", func(t *testing.T) {
+			if !errors.Is(err, ErrWatchDogExpiredNotLessThanZero) {
+				t.Fatalf("TryLockWithFailedWatchDog error:[%v]", err)
+			}
+		})
 	}
 
 	// test cases
