@@ -201,7 +201,7 @@ func TestClient_TryLockWithRetryStrategy(t *testing.T) {
 		Expected *Mutex
 	}{
 		{
-			"TryLockWithRetryStrategy",
+			"TryLockWithNoRetryStrategy",
 			actualOne,
 			&Mutex{
 				client:        client,
@@ -213,7 +213,7 @@ func TestClient_TryLockWithRetryStrategy(t *testing.T) {
 			},
 		},
 		{
-			"TryLockWithExpiration",
+			"TryLockWithAverageRetryStrategy",
 			actualTwo,
 			&Mutex{
 				client:        client,
@@ -222,6 +222,89 @@ func TestClient_TryLockWithRetryStrategy(t *testing.T) {
 				value:         actualTwo.value,
 				retryStrategy: NewAverageRetry(3, 10*time.Second),
 				watchDog:      nil,
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			compareMutex(t, c.Expected, c.Actual)
+		})
+	}
+}
+
+func TestClient_TryLockWithWatchDog(t *testing.T) {
+	// init redis client
+	rdb := redis.NewClient(&redis.Options{
+		Addr: ":6379",
+	})
+	// close redis client
+	defer rdb.Close()
+	// init redislock client
+	client, err := NewDefaultClient(rdb)
+	if err != nil {
+		t.Fatalf("NewDefaultClient error:[%v]", err)
+	}
+	keyOne := "testOne"
+	keyTwo := "testTwo"
+	keyThree := "testThree"
+	defer teardown(t, rdb, []string{keyOne, keyTwo, keyThree})
+
+	actualOne, err := client.TryLockWithWatchDog(context.Background(), keyOne, nil)
+	if err != nil {
+		t.Fatalf("actulOne TryLockWithWatchDog error:[%v]", err)
+	}
+
+	actualTwo, err := client.TryLockWithWatchDog(context.Background(), keyTwo, NewDefaultWatchDog())
+	if err != nil {
+		t.Fatalf("actualTwo TryLockWithWatchDog error:[%v]", err)
+	}
+
+	actualThree, err := client.TryLockWithWatchDog(context.Background(), keyThree, NewWatchDog(10*time.Second))
+	if err != nil {
+		t.Fatalf("actualThree TryLockWithWatchDog error:[%v]", err)
+	}
+
+	// test cases
+	cases := []struct {
+		Name     string
+		Actual   *Mutex
+		Expected *Mutex
+	}{
+		{
+			"TryLockWithNilWatchDog",
+			actualOne,
+			&Mutex{
+				client:        client,
+				key:           keyOne,
+				expiration:    30 * time.Second,
+				value:         actualOne.value,
+				retryStrategy: NewNoRetry(),
+				watchDog:      actualOne.watchDog,
+			},
+		},
+		{
+			"TryLockWithDefaultWatchDog",
+			actualTwo,
+			&Mutex{
+				client:        client,
+				key:           keyTwo,
+				expiration:    30 * time.Second,
+				value:         actualTwo.value,
+				retryStrategy: NewNoRetry(),
+				watchDog:      actualTwo.watchDog,
+			},
+		},
+		{
+			"TryLockWithWatchDog",
+			actualThree,
+			&Mutex{
+				client:        client,
+				key:           keyThree,
+				expiration:    10 * time.Second,
+				value:         actualThree.value,
+				retryStrategy: NewNoRetry(),
+				watchDog:      actualThree.watchDog,
 			},
 		},
 	}
