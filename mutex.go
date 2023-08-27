@@ -101,7 +101,6 @@ func (m *Mutex) stopWatchDog() {
 	}
 }
 
-// newMutex creates a new Mutex.
 func newMutex(client *Client, key, value string, expiration time.Duration, strategy RetryStrategy) *Mutex {
 	return &Mutex{
 		client:        client,

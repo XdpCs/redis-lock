@@ -25,3 +25,18 @@ func IsWatchDogNotStarted(err error) bool {
 func IsWatchDogIsNil(err error) bool {
 	return errors.Is(err, ErrWatchDogIsNil)
 }
+
+// IsMutexLockFailed returns true if err is ErrMutexLockFailed.
+func IsMutexLockFailed(err error) bool {
+	return errors.Is(err, ErrMutexLockFailed)
+}
+
+// IsMutexNotHeld returns true if err is ErrMutexNotHeld.
+func IsMutexNotHeld(err error) bool {
+	return errors.Is(err, ErrMutexNotHeld)
+}
+
+// IsMutexNotInitialized returns true if err is ErrMutexNotInitialized.
+func IsMutexNotInitialized(err error) bool {
+	return errors.Is(err, ErrMutexNotInitialized)
+}

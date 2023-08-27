@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// DefaultExpiration is the default expiration of lock.
 const DefaultExpiration = 30 * time.Second
 
 // WatchDog is a watch dog for redis lock.
